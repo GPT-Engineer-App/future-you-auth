@@ -81,7 +81,11 @@ server.post('/login', async (req, res) => {
     });
 });
 
-sequelize.sync()
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connection to the database has been established successfully.');
+    return sequelize.sync();
+  })
   .then(() => {
     const options = {
       key: fs.readFileSync('path/to/your/private-key.pem'),
