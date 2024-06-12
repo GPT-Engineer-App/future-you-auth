@@ -37,48 +37,62 @@ server.use(limiter);
 
 const users = [];
 
-server.post('/signup', async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
-    return res.status(400).json({ message: 'Invalid input.' });
+server.post('/signup', async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
+      return res.status(400).json({ message: 'Invalid input.' });
+    }
+    if (users.some(user => user.email === email)) {
+      return res.status(400).json({ message: 'Email is already in use.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = { name: validator.escape(name), email: validator.normalizeEmail(email), password: hashedPassword };
+    users.push(newUser);
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        res.status(201).json({ user: newUser });
+      })
+      .catch((error) => {
+        next(error); // Pass the error to the global error handler
+      });
+  } catch (error) {
+    next(error); // Pass the error to the global error handler
   }
-  if (users.some(user => user.email === email)) {
-    return res.status(400).json({ message: 'Email is already in use.' });
-  }
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = { name: validator.escape(name), email: validator.normalizeEmail(email), password: hashedPassword };
-  users.push(newUser);
-  createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      const user = userCredential.user;
-      res.status(201).json({ user: newUser });
-    })
-    .catch((error) => {
-      res.status(400).json({ message: error.message });
-    });
 });
 
-server.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
-    return res.status(400).json({ message: 'Invalid input.' });
+server.post('/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
+      return res.status(400).json({ message: 'Invalid input.' });
+    }
+    const user = users.find(user => user.email === validator.normalizeEmail(email));
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or password.' });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid email or password.' });
+    }
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
+        res.status(200).json({ token });
+      })
+      .catch((error) => {
+        next(error); // Pass the error to the global error handler
+      });
+  } catch (error) {
+    next(error); // Pass the error to the global error handler
   }
-  const user = users.find(user => user.email === validator.normalizeEmail(email));
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
-  }
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
-  }
-  signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
-      res.status(200).json({ token });
-    })
-    .catch((error) => {
-      res.status(400).json({ message: error.message });
-    });
+});
+
+// Global error handler middleware
+server.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 sequelize.sync()
