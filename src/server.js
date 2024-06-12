@@ -35,9 +35,23 @@ const limiter = rateLimit({
 });
 server.use(limiter);
 
+const authenticateJWT = (req, res, next) => {
+  const token = req.header('Authorization');
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+  try {
+    const decoded = jwt.verify(token, 'your_jwt_secret');
+    req.user = decoded;
+    next();
+  } catch (ex) {
+    res.status(400).json({ message: 'Invalid token.' });
+  }
+};
+
 const users = [];
 
-server.post('/signup', async (req, res) => {
+server.post('/signup', authenticateJWT, async (req, res) => {
   const { name, email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
