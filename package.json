@@ -27,6 +27,7 @@
         "axios": "^0.21.4",
         "bcryptjs": "^2.4.3",
         "body-parser": "^1.20.2",
+        "csurf": "^1.11.0",
         "express": "^4.19.2",
         "firebase": "^9.23.0",
         "framer-motion": "^10.16.15",
@@ -36,7 +37,8 @@
         "react-dom": "^18.2.0",
         "react-icons": "^4.12.0",
         "react-router-dom": "^6.20.1",
-        "tailwindcss": "^3.4.4"
+        "tailwindcss": "^3.4.4",
+        "validator": "^13.12.0"
     },
     "prettier": {
         "printWidth": 99999999
