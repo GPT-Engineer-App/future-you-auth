@@ -28,30 +28,21 @@ const limiter = rateLimit({
 });
 server.use(limiter);
 
-const users = [];
-
 server.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
   }
-  if (users.some(user => user.email === email)) {
-    return res.status(400).json({ message: 'Email is already in use.' });
-  }
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = { name: validator.escape(name), email: validator.normalizeEmail(email), password: hashedPassword };
-  users.push(newUser);
-  admin.auth().createUser({
-    email: email,
-    password: password,
-    displayName: name
-  })
-  .then((userRecord) => {
-    res.status(201).json({ user: newUser });
-  })
-  .catch((error) => {
+  try {
+    const userRecord = await admin.auth().createUser({
+      email: email,
+      password: password,
+      displayName: name,
+    });
+    res.status(201).json({ user: userRecord });
+  } catch (error) {
     res.status(400).json({ message: error.message });
-  });
+  }
 });
 
 server.post('/login', async (req, res) => {
@@ -59,22 +50,13 @@ server.post('/login', async (req, res) => {
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
   }
-  const user = users.find(user => user.email === validator.normalizeEmail(email));
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
-  }
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
-  }
-  admin.auth().getUserByEmail(email)
-  .then((userRecord) => {
-    const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
+    const token = jwt.sign({ uid: userRecord.uid }, 'your_jwt_secret', { expiresIn: '1h' });
     res.status(200).json({ token });
-  })
-  .catch((error) => {
-    res.status(400).json({ message: error.message });
-  });
+  } catch (error) {
+    res.status(400).json({ message: 'Invalid email or password.' });
+  }
 });
 
 sequelize.sync()
