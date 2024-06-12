@@ -21,20 +21,24 @@ const Login = () => {
   return (
     <Container centerContent>
       <VStack spacing={4}>
-        <Text fontSize="2xl">Log In</Text>
+        <Text fontSize="2xl" color="brand.900">Log In</Text>
         <Input
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+        bg="brand.50"
+          borderColor="brand.300"
         />
         <Input
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+        bg="brand.50"
+          borderColor="brand.300"
         />
-        <Button onClick={handleLogin}>Log In</Button>
-        <Text onClick={() => navigate("/signup")} cursor="pointer" color="blue.500">
+        <Button onClick={handleLogin} bg="brand.700" color="white">Log In</Button>
+        <Text onClick={() => navigate("/signup")} cursor="pointer" color="accent.700">
           Sign Up
         </Text>
       </VStack>
