@@ -2,8 +2,18 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const redis = require('redis');
+const client = redis.createClient();
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } = require('firebase/auth');
+
+client.on('connect', () => {
+  console.log('Connected to Redis...');
+});
+
+client.on('error', (err) => {
+  console.log('Redis error: ', err);
+});
 
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -40,7 +50,19 @@ server.post('/signup', async (req, res) => {
     });
 });
 
-server.post('/login', async (req, res) => {
+const cache = (req, res, next) => {
+  const { email } = req.body;
+  client.get(email, (err, data) => {
+    if (err) throw err;
+    if (data !== null) {
+      res.send(JSON.parse(data));
+    } else {
+      next();
+    }
+  });
+};
+
+server.post('/login', cache, async (req, res) => {
   const { email, password } = req.body;
   const user = users.find(user => user.email === email);
   if (!user) {
@@ -53,6 +75,7 @@ server.post('/login', async (req, res) => {
   signInWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
       const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
+      client.setex(email, 3600, JSON.stringify({ token }));
       res.status(200).json({ token });
     })
     .catch((error) => {
