@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const https = require('https');
 const fs = require('fs');
+const acme = require('acme-client');
 
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -82,11 +83,34 @@ server.post('/login', async (req, res) => {
 });
 
 sequelize.sync()
-  .then(() => {
+  .then(async () => {
+    const client = new acme.Client({
+      directoryUrl: acme.directory.letsencrypt.staging,
+      accountKey: await acme.forge.createPrivateKey()
+    });
+
+    const [key, csr] = await acme.forge.createCsr({
+      commonName: 'example.com',
+      altNames: ['example.com']
+    });
+
+    const cert = await client.auto({
+      csr,
+      email: 'admin@example.com',
+      termsOfServiceAgreed: true,
+      challengeCreateFn: async (authz, challenge, keyAuthorization) => {
+        // Implement your challenge creation logic here
+      },
+      challengeRemoveFn: async (authz, challenge, keyAuthorization) => {
+        // Implement your challenge removal logic here
+      }
+    });
+
     const options = {
-      key: fs.readFileSync('path/to/your/private-key.pem'),
-      cert: fs.readFileSync('path/to/your/certificate.pem')
+      key: key,
+      cert: cert
     };
+
     https.createServer(options, server).listen(3000, () => {
       console.log('Server is running on port 3000');
     });
