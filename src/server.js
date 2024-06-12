@@ -21,23 +21,23 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID",
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
 
-const server = express();
-server.use(bodyParser.json());
-server.use(helmet());
-server.use(csurf({ cookie: true }));
+const app = express();
+app.use(bodyParser.json());
+app.use(helmet());
+app.use(csurf({ cookie: true }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-server.use(limiter);
+app.use(limiter);
 
 const users = [];
 
-server.post('/signup', async (req, res) => {
+app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
@@ -58,7 +58,7 @@ server.post('/signup', async (req, res) => {
     });
 });
 
-server.post('/login', async (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
@@ -81,16 +81,25 @@ server.post('/login', async (req, res) => {
     });
 });
 
+app.get('/', (req, res) => {
+  res.send('Hello, World!');
+});
+
 sequelize.sync()
   .then(() => {
     const options = {
       key: fs.readFileSync('path/to/your/private-key.pem'),
       cert: fs.readFileSync('path/to/your/certificate.pem')
     };
-    https.createServer(options, server).listen(3000, () => {
+    https.createServer(options, app).listen(3000, () => {
       console.log('Server is running on port 3000');
     });
   })
   .catch(error => {
     console.error('Unable to connect to the database:', error);
   });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
