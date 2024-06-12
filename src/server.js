@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } = require('firebase/auth');
+const { sequelize, User } = require('./models');
 
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -24,42 +25,42 @@ const users = [];
 
 server.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
-  if (users.some(user => user.email === email)) {
-    return res.status(400).json({ message: 'Email is already in use.' });
+  try {
+    const newUser = await User.create({ name, email, password });
+    res.status(201).json({ user: newUser });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      res.status(400).json({ message: 'Email is already in use.' });
+    } else {
+      res.status(500).json({ message: 'Internal server error.' });
+    }
   }
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = { name, email, password: hashedPassword };
-  users.push(newUser);
-  createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      const user = userCredential.user;
-      res.status(201).json({ user: newUser });
-    })
-    .catch((error) => {
-      res.status(400).json({ message: error.message });
-    });
 });
 
 server.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = users.find(user => user.email === email);
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or password.' });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid email or password.' });
+    }
+    const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
+    res.status(200).json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error.' });
   }
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: 'Invalid email or password.' });
-  }
-  signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
-      res.status(200).json({ token });
-    })
-    .catch((error) => {
-      res.status(400).json({ message: error.message });
-    });
 });
 
-server.listen(3000, () => {
-  console.log('Server is running on port 3000');
-});
+sequelize.sync()
+  .then(() => {
+    server.listen(3000, () => {
+      console.log('Server is running on port 3000');
+    });
+  })
+  .catch(error => {
+    console.error('Unable to connect to the database:', error);
+  });
