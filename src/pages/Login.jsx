@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoBackground from "../assets/logo-background.png";
 import { Container, Input, Button, VStack, Text } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -19,7 +20,7 @@ const Login = () => {
   };
 
   return (
-    <Container centerContent>
+    <Container centerContent style={{ backgroundImage: `url(${logoBackground})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', opacity: 0.1 }}>
       <VStack spacing={4}>
         <Text fontSize="2xl" color="brand.900">Log In</Text>
         <Input
