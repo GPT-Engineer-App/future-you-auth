@@ -51,7 +51,7 @@ const authenticateJWT = (req, res, next) => {
 
 const users = [];
 
-server.post('/signup', authenticateJWT, async (req, res) => {
+server.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
@@ -72,7 +72,7 @@ server.post('/signup', authenticateJWT, async (req, res) => {
     });
 });
 
-server.post('/login', authenticateJWT, async (req, res) => {
+server.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!validator.isEmail(email) || !validator.isLength(password, { min: 6 })) {
     return res.status(400).json({ message: 'Invalid input.' });
