@@ -23,6 +23,9 @@ fs
     db[model.name] = model;
   });
 
+const Job = require('./job')(sequelize, Sequelize.DataTypes);
+db[Job.name] = Job;
+
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

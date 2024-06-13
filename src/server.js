@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const { sequelize, User } = require('./models');
+const { sequelize, User, Job } = require('./models');
 const csurf = require('csurf');
 const validator = require('validator');
 const helmet = require('helmet');
@@ -56,6 +56,75 @@ server.post('/login', async (req, res) => {
     res.status(200).json({ token });
   } catch (error) {
     res.status(400).json({ message: 'Invalid email or password.' });
+  }
+});
+
+// Create a new job listing
+server.post('/jobs', async (req, res) => {
+  const { title, description, company, location, salary } = req.body;
+  try {
+    const job = await Job.create({ title, description, company, location, salary });
+    res.status(201).json(job);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Get all job listings
+server.get('/jobs', async (req, res) => {
+  try {
+    const jobs = await Job.findAll();
+    res.status(200).json(jobs);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Get a single job listing by ID
+server.get('/jobs/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const job = await Job.findByPk(id);
+    if (job) {
+      res.status(200).json(job);
+    } else {
+      res.status(404).json({ message: 'Job not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Update a job listing by ID
+server.put('/jobs/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, description, company, location, salary } = req.body;
+  try {
+    const job = await Job.findByPk(id);
+    if (job) {
+      await job.update({ title, description, company, location, salary });
+      res.status(200).json(job);
+    } else {
+      res.status(404).json({ message: 'Job not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Delete a job listing by ID
+server.delete('/jobs/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const job = await Job.findByPk(id);
+    if (job) {
+      await job.destroy();
+      res.status(204).send();
+    } else {
+      res.status(404).json({ message: 'Job not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
