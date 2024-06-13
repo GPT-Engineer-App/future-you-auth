@@ -53,7 +53,7 @@ server.post('/login', async (req, res) => {
   }
   try {
     const userRecord = await admin.auth().getUserByEmail(email);
-    const token = jwt.sign({ uid: userRecord.uid }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
+    const token = jwt.sign({ uid: userRecord.uid, email: userRecord.email }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
     res.status(200).json({ token });
   } catch (error) {
     res.status(400).json({ message: 'Invalid email or password.' });
@@ -61,6 +61,10 @@ server.post('/login', async (req, res) => {
 });
 
 server.get('/protected', authMiddleware, (req, res) => {
+  res.status(200).json({ message: 'This is a protected route.' });
+});
+
+server.get('/protected-route', authMiddleware, (req, res) => {
   res.status(200).json({ message: 'This is a protected route.' });
 });
 
